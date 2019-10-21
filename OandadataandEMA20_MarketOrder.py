@@ -3,7 +3,11 @@ Created on Wed Oct  2 23:32:19 2019
 
 @author: Parthiban
 """
+
+#https://oanda-api-v20.readthedocs.io/en/latest/contrib/orders/marketorderrequest.html
 import oandapyV20.endpoints.pricing as pricing
+
+from oandapyV20.contrib.requests import MarketOrderRequest
 
 from oandapyV20 import API    # the client
 
@@ -55,7 +59,7 @@ for dt in rv['prices']:
 import mysql.connector as mysql
 import json
 
-from oandapyV20.contrib.requests import LimitOrderRequest
+#from oandapyV20.contrib.requests import LimitOrderRequest
 
 import oandapyV20.endpoints.orders as orders
 from oandapyV20 import API    # the client
@@ -120,9 +124,9 @@ flgsell="No"
 if float(round(EMA20,5))<float(closedVal):
     print("Process Buy")
     if flgLastbuy=="No":
-        mktOrder = LimitOrderRequest(
+        mktOrder = MarketOrderRequest(
         instrument="EUR_USD",
-        units=10000,price=float(closedVal))   #price=float(round(EMA20,5)))
+        units=10000)   #price=float(round(EMA20,5)))
     
         ("#2")
         # create the OrderCreate request
@@ -137,9 +141,9 @@ if float(round(EMA20,5))<float(closedVal):
         else:
             print(json.dumps(rv, indent=2))
         #After close the existing slots    
-        mktOrder = LimitOrderRequest(
+        mktOrder = MarketOrderRequest(
         instrument="EUR_USD",
-        units=10000,price=float(closedVal))   #price=float(round(EMA20,5)))
+        units=10000)   #price=float(round(EMA20,5)))
     
         ("#2")
         # create the OrderCreate request
@@ -148,6 +152,7 @@ if float(round(EMA20,5))<float(closedVal):
         try:
             # create the OrderCreate request
             rv = api.request(r)
+            print("ID - " + rv['orderCreateTransaction']['id'])
             print("Pass")
         except API.exceptions.V20Error as err:
             print(r.status_code, err)
@@ -161,9 +166,9 @@ if float(round(EMA20,5))<float(closedVal):
 elif float(round(EMA20,5))>float(closedVal):
     print("Process Sell")
     if flgLastsell=="No":
-        mktOrder = LimitOrderRequest(
+        mktOrder = MarketOrderRequest(
         instrument="EUR_USD",
-        units=-10000,price=float(closedVal))  #price for select manual
+        units=-10000)  #price for select manual
     
         print(json.dumps(mktOrder.data, indent=4))
         
@@ -180,9 +185,9 @@ elif float(round(EMA20,5))>float(closedVal):
         else:
             print(json.dumps(rv, indent=2))
             
-        mktOrder = LimitOrderRequest(
+        mktOrder = MarketOrderRequest(
         instrument="EUR_USD",
-        units=-10000,price=float(closedVal))  #price for select manual
+        units=-10000)  #price for select manual
     
         print(json.dumps(mktOrder.data, indent=4))
         

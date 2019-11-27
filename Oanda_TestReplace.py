@@ -10,6 +10,8 @@ import json
 
 #from oandapyV20.contrib.requests import LimitOrderRequest
 
+from oandapyV20.contrib.requests import MarketOrderRequest
+
 import oandapyV20.endpoints.orders as orders
 from oandapyV20 import API    # the client
 from oandapyV20.contrib.requests import *
@@ -40,32 +42,51 @@ api = API(access_token=access_token)
 #            print(json.dumps(rv, indent=2))
 #            
 
-#ordr = OrderReplace(price: "1.25000")
+
+###################Replace order stoploss and take profit#######
 #
-#r = orders.OrderCreate(accountID, data=ordr.data)
-#rv = api.request(r)
-#print(json.dumps(rv, indent=4))
+#import oandapyV20.endpoints.trades as trades
+#
+#data ={"stopLoss": {"timeInForce": "GTC","price": "1.09"}}
+#
+#r=trades.TradeCRCDO(accountID=accountID, tradeID='323',data =data)
+#api.request(r)
+#print(r.response)
 
-r = orders.OrderDetails(accountID=accountID, orderID='221')
-api.request(r)
-print(r.response)
+#################################################################
 
-#EUR_USD_TAKE_PROFIT = 1.10966
-#print("#1")
-#mktOrder = MarketOrderRequest(
-#    instrument="EUR_USD",
-#    units=100,
-#    takeProfitOnFill=TakeProfitDetails(price=EUR_USD_TAKE_PROFIT).data,
-#    stopLossOnFill=StopLossDetails(price=EUR_USD_STOP_LOSS).data)
-EUR_USD_TAKE_PROFIT = 1.09817
-
-#params ={"stopLossOnFill":"StopLossDetails(price=EUR_USD_STOP_LOSS).data"}
-
-data ={"order": {"stopLossOnFill": StopLossDetails(price=EUR_USD_STOP_LOSS).data}}
-
-r=OrderReplace(accountID=accountID, orderID='221',params =params)
-api.request(r)
-print(r.response)
+###Check open order###############################################
+#import oandapyV20.endpoints.trades as trades
+#r=trades.OpenTrades(accountID=accountID)
+##api.request(r)
+#try:
+#    rv = api.request(r)  
+#    print("Tran ID - " + rv['lastTransactionID'])
+#    print("ID - " + rv['trades'][0]['id'])
+#    print("Status - " + rv['trades'][0]['state'])
+#except:
+#    print("Error")
+#else:
+#    print(json.dumps(rv, indent=4))
 
 
-            
+################################################################
+#
+####Get Last candle details######################################
+#import oandapyV20.endpoints.instruments as instruments
+#      
+#data ={"count": 2,"granularity": "M15"}      
+#r=instruments.InstrumentsCandles(instrument="EUR_USD",params=data)
+##api.request(r)
+#
+#rv = api.request(r)  
+#print("ID - " + rv['instrument'])
+#print("Complete Status - " + str(rv['candles'][0]['complete']))
+#print("Last Closed Price - " + rv['candles'][0]['mid']['c'])
+#print(json.dumps(rv, indent=2))
+
+##################################################################
+
+query = "UPDATE tbloandaprice SET EMA20 = '"+str(round("1.0098",5))+"',Buy = '"+"No"+"',Sell = '"+"NO"+"',Processed_Amt = '"+str(float("1.0098"))+"',orderID = '"+"1.0098"+"' WHERE TimeStamp = '"+str("aaa")+"'"
+    
+print(query)

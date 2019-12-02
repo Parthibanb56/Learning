@@ -17,6 +17,8 @@ import mysql.connector as mysql
 import json
 #from oandapyV20.contrib.requests import LimitOrderRequest
 import oandapyV20.endpoints.orders as orders
+import oandapyV20.endpoints.trades as trades
+
 
 ##Connect MySQL
 db = mysql.connect(
@@ -127,8 +129,6 @@ flgOrderPresent=False
 
 print("-------------------Check Open Order--------------------------")
 ##Check open order###############################################
-import oandapyV20.endpoints.trades as trades
-from oandapyV20 import API
 r=trades.OpenTrades(accountID=accountID)
 #api.request(r)
 try:
@@ -215,7 +215,6 @@ if flgOrderPresent==False:
     
     ##Check open order###############################################
     r=trades.OpenTrades(accountID=accountID)
-    #api.request(r)
     activeID=False
     try:
         rv = api.request(r)  
@@ -224,6 +223,7 @@ if flgOrderPresent==False:
         print("ID - " + rv['trades'][0]['id'])
         print("Status - " + rv['trades'][0]['state'])
         activeID=False
+        
     except:
         print("Error")
     else:
@@ -241,6 +241,8 @@ else:
     ##Update stop loss amount to order
     print("------------------Start Update Stop Loss------------------------")
     
+    tradeType=""
+    
     ##Check open order###############################################
     r=trades.OpenTrades(accountID=accountID)
     #api.request(r)
@@ -252,8 +254,14 @@ else:
         TranID=rv['lastTransactionID']
         print("ID - " + rv['trades'][0]['id'])
         print("Status - " + rv['trades'][0]['state'])
+        tradeType=float(rv['trades'][0]['currentUnits'])
+        if float(rv['trades'][0]['currentUnits'])>0:
+            tradeType="Buy"
+        else:
+            tradeType="Sell"
         activeStatus=rv['trades'][0]['state']
         activeID=True
+        TranID=rv['trades'][0]['id']
     except:
         print("Error")
     else:
@@ -270,36 +278,38 @@ else:
         
     print("Current Price - ",currPrice)
     print("Closed Amount - ",closedVal)
+    print("Trade Type - ",tradeType)
+    print("Trade ID - ",TranID)
+    
+    acceptLoss=0.00500
     
     print("---------------Open order validation--------------------------")
     
-    if activeID==True and activeStatus=="OPEN":          
-            
+    if activeID==True and activeStatus=="OPEN" and tradeType=="Buy":          
+        print("Action started for Buy stop loss")
         if float(str(currPrice))>float(str(closedVal)):    
-            #Update Stop Loss with ID
-            from oandapyV20.contrib.requests import StopLossOrderRequest
-            ordr = StopLossOrderRequest(tradeID=TranID, price=closedVal)
-            print(json.dumps(ordr.data, indent=4))
             
-            # now we have the order specification, create the order request
-            r = orders.OrderCreate(accountID, data=ordr.data)
-            # perform the request
-            rv = api.request(r)
+            print("Tran 1")
+            #Update Stop Loss with ID
+            #from oandapyV20.contrib.requests import StopLossOrderRequest
+            #ordr = StopLossOrderRequest(tradeID=TranID, price=closedVal)
+#            ordr = StopLossOrderRequest(tradeID=TranID, price=closedVal)
+#            print(json.dumps(ordr.data, indent=4))
+            
+            data ={"stopLoss": {"timeInForce": "GTC","price": str(closedVal)}}
+            r=trades.TradeCRCDO(accountID=accountID, tradeID=TranID, data=data)
+            rv = api.request(r)  
             print(json.dumps(rv, indent=4))
             query = "UPDATE tbloandaprice SET EMA20 = '"+str(round(EMA20,5))+"',Buy = '"+flgbuy+"',Sell = '"+flgsell+"',Processed_Amt = '"+str(float(closedVal))+"',Stoploss_Amt = '"+str(float(closedVal))+"',orderID = '"+TranID+"' WHERE TimeStamp = '"+str(timestamp)+"'"
             print(query)
             cursor.execute(query)
             db.commit()
-        elif float(str(currPrice))<float(str(closedVal)):    
+        elif (float(str(currPrice))+acceptLoss)<float(str(closedVal)):    
+            print("Tran 2")
             #Update Stop Loss with ID
-            from oandapyV20.contrib.requests import StopLossOrderRequest
-            ordr = StopLossOrderRequest(tradeID=TranID, price=currPrice)
-            print(json.dumps(ordr.data, indent=4))
-            
-            # now we have the order specification, create the order request
-            r = orders.OrderCreate(accountID, data=ordr.data)
-            # perform the request
-            rv = api.request(r)
+            data ={"stopLoss": {"timeInForce": "GTC","price": str(currPrice)}}
+            r=trades.TradeCRCDO(accountID=accountID, tradeID=TranID, data=data)
+            rv = api.request(r)  
             print(json.dumps(rv, indent=4))
             query = "UPDATE tbloandaprice SET EMA20 = '"+str(round(EMA20,5))+"',Buy = '"+flgbuy+"',Sell = '"+flgsell+"',Processed_Amt = '"+str(float(closedVal))+"',Stoploss_Amt = '"+str(float(closedVal))+"',orderID = '"+TranID+"' WHERE TimeStamp = '"+str(timestamp)+"'"
             print(query)
@@ -307,7 +317,39 @@ else:
             db.commit()
         
         else:
-            print("Stop Loss Not Required")
+            print("Stop Loss Not Required for Buy")
+            query = "UPDATE tbloandaprice SET EMA20 = '"+str(round(EMA20,5))+"',Buy = '"+flgbuy+"',Sell = '"+flgsell+"',Processed_Amt = '"+str(float(closedVal))+"',Stoploss_Amt = '""',orderID = '"+TranID+"' WHERE TimeStamp = '"+str(timestamp)+"'"
+            print(query)
+            cursor.execute(query)
+            db.commit()
+    elif activeID==True and activeStatus=="OPEN" and tradeType=="Sell":          
+        print("Action started for Sell stop loss")
+        if float(str(currPrice))<float(str(closedVal)):    
+            
+            print("Tran 1")
+            #Update Stop Loss with ID
+            data ={"stopLoss": {"timeInForce": "GTC","price": str(closedVal)}}
+            r=trades.TradeCRCDO(accountID=accountID, tradeID=TranID, data=data)
+            rv = api.request(r)  
+            print(json.dumps(rv, indent=4))
+            query = "UPDATE tbloandaprice SET EMA20 = '"+str(round(EMA20,5))+"',Buy = '"+flgbuy+"',Sell = '"+flgsell+"',Processed_Amt = '"+str(float(closedVal))+"',Stoploss_Amt = '"+str(float(closedVal))+"',orderID = '"+TranID+"' WHERE TimeStamp = '"+str(timestamp)+"'"
+            print(query)
+            cursor.execute(query)
+            db.commit()
+        elif (float(str(currPrice))+acceptLoss)>float(str(closedVal)):    
+            print("Tran 2")
+            #Update Stop Loss with ID
+            data ={"stopLoss": {"timeInForce": "GTC","price": str(currPrice)}}
+            r=trades.TradeCRCDO(accountID=accountID, tradeID=TranID, data=data)
+            rv = api.request(r)  
+            print(json.dumps(rv, indent=4))
+            query = "UPDATE tbloandaprice SET EMA20 = '"+str(round(EMA20,5))+"',Buy = '"+flgbuy+"',Sell = '"+flgsell+"',Processed_Amt = '"+str(float(closedVal))+"',Stoploss_Amt = '"+str(float(closedVal))+"',orderID = '"+TranID+"' WHERE TimeStamp = '"+str(timestamp)+"'"
+            print(query)
+            cursor.execute(query)
+            db.commit()
+        
+        else:
+            print("Stop Loss Not Required for Sell")
             query = "UPDATE tbloandaprice SET EMA20 = '"+str(round(EMA20,5))+"',Buy = '"+flgbuy+"',Sell = '"+flgsell+"',Processed_Amt = '"+str(float(closedVal))+"',Stoploss_Amt = '""',orderID = '"+TranID+"' WHERE TimeStamp = '"+str(timestamp)+"'"
             print(query)
             cursor.execute(query)
@@ -319,3 +361,4 @@ else:
         cursor.execute(query)
         db.commit()
         
+###################################################################################################
